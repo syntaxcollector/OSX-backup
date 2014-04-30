@@ -33,14 +33,13 @@ DNS=YES
 ### VARIABLES  ###
 
 BACKUP_LOCATION="/Users/admin/Desktop"
-PASSWD=""
+PASSWD="password"
 LOGFILE=/var/log/osx_backup.log
 SERVERADMIN="/Applications/Server.app/Contents/ServerRoot/usr/sbin/serveradmin"
 
 # You can either backup all of the services (even those not in use)
 # or you can specify which services you want to backup.
 SERVICES=`serveradmin list`
-#SERVICES="afp ipfilter smb"
 
 OS_VER_MAJ=$(sw_vers -productVersion | cut -c 1-4)
 
@@ -90,6 +89,18 @@ function is_service_running {
 	else
 		return 1
 	fi
+}
+
+function check_postgres {
+        /usr/bin/sudo -u _postgres /Applications/Server.app/Contents/ServerRoot/usr/bin/pg_ctl status -D /Library/Server/PostgreSQL\ For\ Server\ Services/Data >> /dev/null
+        retval=$?
+        
+        if [ $retval -ne 0 ]; then
+                echo "Postgres is not running, launch postgres..." >> $LOGFILE
+                sudo -u _postgres /Applications/Server.app/Contents/ServerRoot/usr/bin/postgres_real -D /Library/Server/PostgreSQL\ For\ Server\ Services/Data -c listen_addresses= -c log_connections=on -c log_directory=/Library/Logs/PostgreSQL -c log_filename=PostgreSQL_Server_Services.log -c log_line_prefix=%t  -c log_lock_waits=on -c log_statement=ddl -c logging_collector=on -c unix_socket_directory=/Library/Server/PostgreSQL\ For\ Server\ Services/Socket -c unix_socket_group=_postgres -c unix_socket_permissions=0770 &            
+                pidval=$!
+				sleep 5
+        fi
 }
 
 # Check to see if backup location exists, if not, create it. 
@@ -170,13 +181,17 @@ fi
 
 # Backup Wiki
 if [ $WIKI == "YES" ]; then
-	if  is_service_running wiki  ; then
+	if  is_service_running wiki; then
 		RESTART="YES"	
 		echo "Stopping Wiki service..." >> $LOGFILE
-	#	serveradmin stop wiki >> $LOGFILE || fatal "could not stop wiki"
+		serveradmin stop wiki >> $LOGFILE || fatal "could not stop wiki"
+		
 	else
 		RESTART="NO"
 	fi
+	
+	check_postgres
+	
 	echo "Backing up Wiki service database..."  >> $LOGFILE
 	/Applications/Server.app/Contents/ServerRoot/usr/bin/pg_dump -h "/Library/Server/PostgreSQL For Server Services/Socket" --format=c --compress=9 --blobs --username=collab --file=$BACKUP_LOCATION/$DATESTAMP/collab.pgdump collab || fatal "could not backup database collab"
 	echo "Copying binary files" >> $LOGFILE
