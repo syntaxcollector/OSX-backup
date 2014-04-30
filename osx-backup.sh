@@ -16,6 +16,7 @@
 # 20130416 - JE: Specified serveradmin path as variable, moved OD_BACKUP variable, removed debug flag
 # 20131025 - JE: Changed device_management user to _devicemgr 
 # 20140221 - JE: Added DNS backup service
+# 20140430 - JE: Added check_postfix function to check for postfix process
 
 export DATESTAMP=`date +%Y-%m-%d`
 
