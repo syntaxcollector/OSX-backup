@@ -214,6 +214,9 @@ if [ $CALDAV == "YES" ]; then
 	else
 		RESTART="NO"
 	fi
+		
+	check_postgres
+	
 	echo "Backing up Address Book and Calendar services..."
 	/Applications/Server.app/Contents/ServerRoot/usr/bin/pg_dump -h "/Library/Server/PostgreSQL For Server Services/Socket" --format=c --compress=9 --blobs --username=caldav --file=$BACKUP_LOCATION/$DATESTAMP/caldav.sql caldav || fatal "could not backup database caldav"
 	if [ $RESTART == "YES" ]; then	
